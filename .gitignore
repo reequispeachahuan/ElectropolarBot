@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+.DS_Store
+data/raw/*
+data/processed/*
+data/documents/*
+data/opportunities/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/documents/.gitkeep
+!data/opportunities/.gitkeep
