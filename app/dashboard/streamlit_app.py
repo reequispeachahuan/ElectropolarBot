@@ -1,31 +1,17 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pandas as pd
 import streamlit as st
 
-from app.main import run_once
-
 st.set_page_config(page_title="SolarBot SEACE", layout="wide")
 st.title("☀️ SolarBot SEACE")
-st.caption("Embudo comercial automatizado para oportunidades públicas solares")
+st.caption("Embudo comercial para oportunidades públicas solares")
 
-latest_csv = Path("data/processed/latest_opportunities.csv")
-
-with st.sidebar:
-    st.subheader("Automatización")
-    if st.button("Ejecutar búsqueda SEACE ahora", use_container_width=True):
-        with st.spinner("Buscando y procesando oportunidades públicas..."):
-            processed = run_once(send_telegram=False)
-        st.success(f"Búsqueda completada. Oportunidades procesadas: {len(processed)}")
-
-if latest_csv.exists():
-    df = pd.read_csv(latest_csv)
-    st.info(f"Mostrando resultados automáticos: {latest_csv}")
+uploaded = st.file_uploader("Cargar oportunidades CSV para revisión", type=["csv"])
+if uploaded:
+    df = pd.read_csv(uploaded)
 else:
     df = pd.DataFrame(columns=["status", "priority", "region", "entity_name", "title", "estimated_amount", "deadline"])
-    st.warning("Aún no hay resultados guardados. Ejecuta una búsqueda desde el botón lateral o por CLI.")
 
 priority = st.multiselect("Prioridad", sorted(df["priority"].dropna().unique()) if not df.empty else [])
 if priority:
