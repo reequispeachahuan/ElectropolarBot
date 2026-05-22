@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 from telegram.ext import Application
@@ -41,6 +39,3 @@ class TelegramNotifier:
                 reply_markup=build_action_keyboard(seace_url),
                 disable_web_page_preview=True,
             )
-
-    def send_message_sync(self, text: str, seace_url: str | None = None) -> None:
-        asyncio.run(self.send_message(text=text, seace_url=seace_url))
