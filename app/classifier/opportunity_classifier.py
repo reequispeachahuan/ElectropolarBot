@@ -37,7 +37,8 @@ class OpportunityClassifier:
             opportunity.get("title"), opportunity.get("description"), opportunity.get("object_type")
         )
         discard_matches = [match for match in matches if match.match_type == "descartar"]
-        if discard_matches:
+        high_priority_matches = [match for match in matches if match.match_type == "alta_prioridad"]
+        if discard_matches and not high_priority_matches:
             return ClassificationResult(
                 priority="descartada",
                 action="archivar_sin_alerta",

@@ -1,38 +1,45 @@
 alta_prioridad:
   - luminaria solar
   - luminarias solares
-  - alumbrado público solar
+  - alumbrado publico solar
   - sistema fotovoltaico
+  - fotovoltaico
+  - fotovoltaica
   - panel solar
   - paneles solares
   - kit solar
   - poste solar
   - farola solar
-  - iluminación solar
-  - electrificación rural solar
+  - iluminacion solar
+  - electrificacion rural solar
 media_prioridad:
-  - batería
-  - banco de baterías
+  - bateria
+  - banco de baterias
   - inversor
   - controlador de carga
-  - energía renovable
-  - sistema de energía
-  - alumbrado público
-  - mantenimiento eléctrico
-  - suministro eléctrico
-  - instalación eléctrica
+  - energia renovable
+  - sistema de energia
+  - alumbrado publico
+  - mantenimiento electrico
+  - suministro electrico
+  - instalacion electrica
 baja_prioridad:
   - UPS
   - acumulador
-  - tablero eléctrico
+  - tablero electrico
   - cableado
   - reflector
-  - lámpara
+  - lampara
   - postes
 descartar:
-  - batería para laptop
-  - batería para patrullero
-  - batería para camioneta
+  - bateria para laptop
+  - bateria para patrullero
+  - bateria para camioneta
+  - protector solar
+  - protectores solares
+  - bloqueador solar
+  - bloqueadores solares
+  - proteccion solar
   - pila alcalina
-  - grupo electrógeno
+  - grupo electrogeno
   - combustible

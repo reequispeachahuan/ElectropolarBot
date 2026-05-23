@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date
+import re
 from typing import Any
 
 from app.config.settings import settings
@@ -25,7 +26,7 @@ def score_opportunity(opportunity: dict[str, Any], today: date | None = None) ->
         score += 30
         reasons.append("Rubro solar directo (+30)")
 
-    amount = float(opportunity.get("estimated_amount") or 0)
+    amount = _amount(opportunity.get("estimated_amount"))
     if amount >= settings.attractive_amount:
         score += 20
         reasons.append("Monto atractivo (+20)")
@@ -75,3 +76,24 @@ def _recommendation(score: int) -> str:
     if score >= 30:
         return "Baja prioridad"
     return "Descartar"
+
+
+def _amount(value: Any) -> float:
+    if value in (None, "", "---"):
+        return 0
+    if isinstance(value, int | float):
+        return float(value)
+    text = re.sub(r"[^\d,.\-]", "", str(value))
+    if not text or text == "---":
+        return 0
+    if "," in text and "." in text:
+        if text.rfind(",") > text.rfind("."):
+            text = text.replace(".", "").replace(",", ".")
+        else:
+            text = text.replace(",", "")
+    elif "," in text:
+        text = text.replace(",", "")
+    try:
+        return float(text)
+    except ValueError:
+        return 0
