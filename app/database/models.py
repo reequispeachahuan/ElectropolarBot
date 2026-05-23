@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, Text, func
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -90,3 +90,23 @@ class Alert(Base):
     status: Mapped[str] = mapped_column(String(40), default="pendiente")
 
     opportunity: Mapped[Opportunity] = relationship(back_populates="alerts")
+
+
+class ScanRun(Base):
+    __tablename__ = "scan_runs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(40), default="running", index=True)
+    keywords: Mapped[str | None] = mapped_column(Text)
+    departments: Mapped[str | None] = mapped_column(Text)
+    found_count: Mapped[int] = mapped_column(Integer, default=0)
+    processed_count: Mapped[int] = mapped_column(Integer, default=0)
+    high_count: Mapped[int] = mapped_column(Integer, default=0)
+    medium_count: Mapped[int] = mapped_column(Integer, default=0)
+    low_count: Mapped[int] = mapped_column(Integer, default=0)
+    discarded_count: Mapped[int] = mapped_column(Integer, default=0)
+    alerts_sent: Mapped[int] = mapped_column(Integer, default=0)
+    alerts_failed: Mapped[int] = mapped_column(Integer, default=0)
+    error_message: Mapped[str | None] = mapped_column(Text)

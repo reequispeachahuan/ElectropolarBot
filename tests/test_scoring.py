@@ -33,3 +33,9 @@ def test_scoring_penalizes_short_deadline_and_false_positive():
     )
     assert result.final_score == 0
     assert result.recommendation == "Descartar"
+
+
+def test_scoring_tolerates_seace_amount_placeholders():
+    result = score_opportunity({"title": "Compra de panel solar", "estimated_amount": "---"})
+
+    assert result.final_score >= 30

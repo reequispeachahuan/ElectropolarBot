@@ -1,0 +1,22 @@
+services:
+  app:
+    secrets:
+      - telegram_bot_token
+      - telegram_chat_id
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.health"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 60s
+
+  dashboard:
+    secrets:
+      - telegram_bot_token
+      - telegram_chat_id
+
+secrets:
+  telegram_bot_token:
+    file: ./secrets/telegram_bot_token.txt
+  telegram_chat_id:
+    file: ./secrets/telegram_chat_id.txt
