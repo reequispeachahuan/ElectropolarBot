@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
+from pathlib import Path
 import re
 from typing import Iterable
 from urllib.parse import quote_plus
@@ -46,13 +47,21 @@ class SeaceScraper:
         results: list[dict[str, object]] = []
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=self.headless)
-            page = browser.new_page()
+            page = browser.new_page(
+                viewport={"width": 1366, "height": 768},
+                user_agent=(
+                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+                ),
+            )
+            page.set_default_timeout(45000)
             try:
                 for source in sources:
                     logger.info("Consultando fuente publica SEACE: %s", source.name)
                     try:
                         results.extend(self._search_source(page, source, query))
                     except Exception:
+                        self._save_debug_artifacts(page, source.name)
                         logger.exception("No se pudo consultar fuente SEACE: %s", source.name)
             finally:
                 browser.close()
@@ -63,6 +72,10 @@ class SeaceScraper:
             logger.info("Se omite %s porque no expone filtro de departamento", source.name)
             return []
         page.goto(source.url, wait_until="domcontentloaded", timeout=60000)
+        try:
+            page.wait_for_selector("id=tbBuscador", timeout=45000)
+        except PlaywrightTimeoutError as exc:
+            raise RuntimeError(f"SEACE no cargo el buscador publico. URL final: {page.url}") from exc
         self._apply_search(page, source, query)
         return self._collect_paginated_results(page, source, query)
 
@@ -117,7 +130,7 @@ class SeaceScraper:
     def _search_procedimientos_seleccion(self, page, query: SearchQuery) -> None:
         description_selector = "id=tbBuscador:idFormBuscarProceso:descripcionObjeto"
         self._show_tab(page, "#tbBuscador:tab1", description_selector, "procedimientos de seleccion")
-        page.locator(description_selector).fill(query.keyword)
+        self._fill_input(page, description_selector, query.keyword)
         if query.department:
             self._select_primefaces_option_by_label(
                 page,
@@ -129,7 +142,7 @@ class SeaceScraper:
     def _search_anuncios_contratacion_futura(self, page, query: SearchQuery) -> None:
         description_selector = "id=tbBuscador:idFormbuscarACF:descripcionObjeto"
         self._show_tab(page, "#tbBuscador:tab7", description_selector, "anuncios de contratacion futura")
-        page.locator(description_selector).fill(query.keyword)
+        self._fill_input(page, description_selector, query.keyword)
         self._click_and_wait(page, "id=tbBuscador:idFormbuscarACF:btnBuscarSelCCOToken")
 
     @staticmethod
@@ -150,10 +163,54 @@ class SeaceScraper:
         else:
             logger.warning("No se encontro pestana SEACE: %s; se buscara formulario directo", tab_name)
 
+        if page.locator(ready_selector).count() == 0:
+            page.evaluate(
+                """(href) => {
+                    const link = Array.from(document.querySelectorAll("a"))
+                        .find((item) => item.getAttribute("href") === href);
+                    if (link) {
+                        link.click();
+                    }
+                }""",
+                tab_href,
+            )
+
+        page.evaluate(
+            """(href) => {
+                const panelId = href.replace(/^#/, "");
+                const panel = document.getElementById(panelId);
+                if (panel) {
+                    panel.style.display = "block";
+                    panel.setAttribute("aria-hidden", "false");
+                }
+            }""",
+            tab_href,
+        )
+
         try:
             ready.wait_for(state="visible", timeout=15000)
         except PlaywrightTimeoutError as exc:
-            raise RuntimeError(f"No se encontro formulario SEACE para {tab_name}") from exc
+            if page.locator(ready_selector).count() > 0:
+                logger.warning("Formulario SEACE de %s existe pero no esta visible; se llenara por DOM", tab_name)
+                return
+            raise RuntimeError(f"No se encontro formulario SEACE para {tab_name}. URL final: {page.url}") from exc
+
+    @staticmethod
+    def _fill_input(page, selector: str, value: str) -> None:
+        locator = page.locator(selector)
+        if locator.count() == 0:
+            raise RuntimeError(f"No se encontro selector SEACE: {selector}")
+        try:
+            locator.first.fill(value, timeout=10000)
+        except PlaywrightTimeoutError:
+            locator.first.evaluate(
+                """(input, text) => {
+                    input.value = text;
+                    input.dispatchEvent(new Event("input", { bubbles: true }));
+                    input.dispatchEvent(new Event("change", { bubbles: true }));
+                }""",
+                value,
+            )
 
     @staticmethod
     def _click_and_wait(page, selector: str) -> None:
@@ -301,3 +358,24 @@ class SeaceScraper:
         if not seace_code:
             return base_url
         return f"{base_url}#buscar:{quote_plus(seace_code)}"
+
+    @staticmethod
+    def _save_debug_artifacts(page, source_name: str) -> None:
+        debug_dir = settings.data_dir / "debug"
+        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        safe_source = re.sub(r"[^a-zA-Z0-9_-]+", "_", source_name)
+        html_path = debug_dir / f"seace_{safe_source}_{timestamp}.html"
+        screenshot_path = debug_dir / f"seace_{safe_source}_{timestamp}.png"
+        try:
+            debug_dir.mkdir(parents=True, exist_ok=True)
+            html_path.write_text(page.content(), encoding="utf-8")
+            page.screenshot(path=str(screenshot_path), full_page=True)
+            logger.error(
+                "Diagnostico SEACE guardado: html=%s screenshot=%s url=%s title=%s",
+                html_path,
+                screenshot_path,
+                page.url,
+                page.title(),
+            )
+        except Exception:
+            logger.exception("No se pudo guardar diagnostico SEACE")
