@@ -115,8 +115,9 @@ class SeaceScraper:
             return
 
     def _search_procedimientos_seleccion(self, page, query: SearchQuery) -> None:
-        page.locator('a[href$="#tbBuscador:tab1"]').first.click(force=True)
-        page.locator("id=tbBuscador:idFormBuscarProceso:descripcionObjeto").fill(query.keyword)
+        description_selector = "id=tbBuscador:idFormBuscarProceso:descripcionObjeto"
+        self._show_tab(page, "#tbBuscador:tab1", description_selector, "procedimientos de seleccion")
+        page.locator(description_selector).fill(query.keyword)
         if query.department:
             self._select_primefaces_option_by_label(
                 page,
@@ -126,9 +127,33 @@ class SeaceScraper:
         self._click_and_wait(page, "id=tbBuscador:idFormBuscarProceso:btnBuscarSelToken")
 
     def _search_anuncios_contratacion_futura(self, page, query: SearchQuery) -> None:
-        page.locator('a[href$="#tbBuscador:tab7"]').first.click(force=True)
-        page.locator("id=tbBuscador:idFormbuscarACF:descripcionObjeto").fill(query.keyword)
+        description_selector = "id=tbBuscador:idFormbuscarACF:descripcionObjeto"
+        self._show_tab(page, "#tbBuscador:tab7", description_selector, "anuncios de contratacion futura")
+        page.locator(description_selector).fill(query.keyword)
         self._click_and_wait(page, "id=tbBuscador:idFormbuscarACF:btnBuscarSelCCOToken")
+
+    @staticmethod
+    def _show_tab(page, tab_href: str, ready_selector: str, tab_name: str) -> None:
+        ready = page.locator(ready_selector).first
+        try:
+            ready.wait_for(state="visible", timeout=5000)
+            return
+        except PlaywrightTimeoutError:
+            pass
+
+        tab = page.locator(f'a[href$="{tab_href}"]').first
+        if tab.count() > 0:
+            try:
+                tab.click(force=True, timeout=10000)
+            except PlaywrightTimeoutError:
+                logger.warning("No se pudo abrir pestana SEACE: %s", tab_name)
+        else:
+            logger.warning("No se encontro pestana SEACE: %s; se buscara formulario directo", tab_name)
+
+        try:
+            ready.wait_for(state="visible", timeout=15000)
+        except PlaywrightTimeoutError as exc:
+            raise RuntimeError(f"No se encontro formulario SEACE para {tab_name}") from exc
 
     @staticmethod
     def _click_and_wait(page, selector: str) -> None:

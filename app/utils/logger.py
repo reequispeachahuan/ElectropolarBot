@@ -8,4 +8,6 @@ def get_logger(name: str) -> logging.Logger:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
     )
+    for noisy_logger in ("httpx", "httpcore", "telegram"):
+        logging.getLogger(noisy_logger).setLevel(logging.WARNING)
     return logging.getLogger(name)
