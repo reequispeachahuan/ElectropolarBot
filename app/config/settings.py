@@ -56,7 +56,10 @@ class Settings:
         "https://prod4.seace.gob.pe:8086/api/oportunidades",
     )
     seace_object_codes: list[str] = field(default_factory=lambda: _csv(os.getenv("SEACE_OBJECT_CODES", "62,63,64,65")))
+    seace_request_delay_seconds: float = float(os.getenv("SEACE_REQUEST_DELAY_SECONDS", "2"))
+    seace_request_timeout_seconds: int = int(os.getenv("SEACE_REQUEST_TIMEOUT_SECONDS", "60"))
     scan_interval_hours: int = int(os.getenv("SCAN_INTERVAL_HOURS", "3"))
+    scan_jitter_minutes: int = int(os.getenv("SCAN_JITTER_MINUTES", "20"))
     daily_scan_hour: int = int(os.getenv("DAILY_SCAN_HOUR", "6"))
     daily_scan_minute: int = int(os.getenv("DAILY_SCAN_MINUTE", "0"))
     daily_summary_hour: int = int(os.getenv("DAILY_SUMMARY_HOUR", "18"))

@@ -15,6 +15,7 @@ def start_scheduler() -> None:
         minute=settings.daily_scan_minute,
         id="daily_seace_scan",
         replace_existing=True,
+        jitter=settings.scan_jitter_minutes * 60,
     )
     scheduler.add_job(
         run_once,
@@ -22,6 +23,7 @@ def start_scheduler() -> None:
         hours=settings.scan_interval_hours,
         id="periodic_seace_scan",
         replace_existing=True,
+        jitter=settings.scan_jitter_minutes * 60,
     )
     scheduler.add_job(
         send_summary,

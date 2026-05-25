@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 import re
+import time
 from typing import Iterable
 from urllib.parse import quote_plus
 from urllib.parse import quote
@@ -77,7 +78,7 @@ class SeaceScraper:
         results: list[dict[str, object]] = []
         department = department_code(query.department)
         keyword = quote(query.keyword or "0", safe="")
-        for object_code in settings.seace_object_codes:
+        for index, object_code in enumerate(settings.seace_object_codes):
             url = (
                 f"{settings.seace_openegocio_base_url.rstrip('/')}"
                 f"/codObjeto/codDepartamento/sintesisProceso/codTipoProceso/"
@@ -91,7 +92,7 @@ class SeaceScraper:
             )
             response = requests.get(
                 url,
-                timeout=60,
+                timeout=settings.seace_request_timeout_seconds,
                 headers={
                     "Accept": "application/json",
                     "User-Agent": (
@@ -106,6 +107,8 @@ class SeaceScraper:
                 logger.warning("Respuesta SEACE prod4 inesperada para %s: %s", url, type(payload).__name__)
                 continue
             results.extend(self._normalize_openegocio_row(item, query) for item in payload if isinstance(item, dict))
+            if settings.seace_request_delay_seconds > 0 and index + 1 < len(settings.seace_object_codes):
+                time.sleep(settings.seace_request_delay_seconds)
         return [item for item in results if self._has_identity(item)]
 
     def _search_source(self, page, source: SeaceSource, query: SearchQuery) -> list[dict[str, object]]:
