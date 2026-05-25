@@ -32,6 +32,34 @@ SEACE_DEPARTMENTS = (
     "UCAYALI",
 )
 
+SEACE_DEPARTMENT_CODES = {
+    "AMAZONAS": "1",
+    "ANCASH": "2",
+    "APURIMAC": "3",
+    "AREQUIPA": "4",
+    "AYACUCHO": "5",
+    "CAJAMARCA": "6",
+    "CALLAO": "7",
+    "CUSCO": "8",
+    "HUANCAVELICA": "9",
+    "HUANUCO": "10",
+    "ICA": "11",
+    "JUNIN": "12",
+    "LA LIBERTAD": "13",
+    "LAMBAYEQUE": "14",
+    "LIMA": "15",
+    "LORETO": "16",
+    "MADRE DE DIOS": "17",
+    "MOQUEGUA": "18",
+    "PASCO": "19",
+    "PIURA": "20",
+    "PUNO": "21",
+    "SAN MARTIN": "22",
+    "TACNA": "23",
+    "TUMBES": "24",
+    "UCAYALI": "25",
+}
+
 
 def normalize_department(value: str) -> str:
     wanted = normalize_text(value)
@@ -44,3 +72,13 @@ def normalize_department(value: str) -> str:
 
 def normalize_departments(values: list[str]) -> list[str]:
     return [normalize_department(value) for value in values]
+
+
+def department_code(value: str | None) -> str:
+    if not value:
+        return "0"
+    department = normalize_department(value)
+    try:
+        return SEACE_DEPARTMENT_CODES[department]
+    except KeyError as exc:
+        raise ValueError(f"Departamento SEACE sin codigo API prod4: {department}") from exc

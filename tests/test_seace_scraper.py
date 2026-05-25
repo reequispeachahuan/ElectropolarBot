@@ -46,3 +46,30 @@ def test_fallback_search_url_includes_seace_code():
 
     assert "buscadorPublico.xhtml" in url
     assert "LP-001-2026" in url
+
+
+def test_normalize_openegocio_row_maps_api_fields():
+    row = {
+        "idProcedimiento": 1218601,
+        "detEntidad": "Municipalidad Distrital",
+        "detTipoProceso": "Licitacion Publica Abreviada",
+        "nomenclatura": "LP-ABR-15-2026-MDCGAL-1",
+        "detObjeto": "Bien",
+        "detItem": "ADQUISICION DE PANELES SOLARES 615W",
+        "detCubso": "PANEL SOLAR DE 75 W",
+        "valorReferencialItem": "---",
+        "fechaConvocatoria": "22/05/2026 16:33:00",
+        "fechaFin": "01/06/2026 23:59:00",
+        "nroItem": "1",
+        "sintesisProceso": "Implementacion de paneles solares",
+    }
+
+    opportunity = SeaceScraper._normalize_openegocio_row(row, SearchQuery(keyword="solar", department="TACNA"))
+
+    assert opportunity["source"] == "seace_oportunidades_negocio"
+    assert opportunity["seace_code"] == "LP-ABR-15-2026-MDCGAL-1#1"
+    assert opportunity["title"] == "ADQUISICION DE PANELES SOLARES 615W"
+    assert opportunity["entity_name"] == "Municipalidad Distrital"
+    assert opportunity["region"] == "TACNA"
+    assert opportunity["estimated_amount"] == ""
+    assert "1218601" in opportunity["seace_url"]

@@ -50,6 +50,12 @@ class Settings:
     keywords_path: Path = Path(os.getenv("KEYWORDS_PATH", "app/config/solar_keywords.yml"))
     search_keywords: list[str] = field(default_factory=lambda: _csv(os.getenv("SEACE_SEARCH_KEYWORDS", "solar")))
     seace_departments: list[str] = field(default_factory=lambda: _csv(os.getenv("SEACE_DEPARTMENTS")))
+    seace_source: str = os.getenv("SEACE_SOURCE", "openegocio")
+    seace_openegocio_base_url: str = os.getenv(
+        "SEACE_OPENEGOCIO_BASE_URL",
+        "https://prod4.seace.gob.pe:8086/api/oportunidades",
+    )
+    seace_object_codes: list[str] = field(default_factory=lambda: _csv(os.getenv("SEACE_OBJECT_CODES", "62,63,64,65")))
     scan_interval_hours: int = int(os.getenv("SCAN_INTERVAL_HOURS", "3"))
     daily_scan_hour: int = int(os.getenv("DAILY_SCAN_HOUR", "6"))
     daily_scan_minute: int = int(os.getenv("DAILY_SCAN_MINUTE", "0"))

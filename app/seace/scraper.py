@@ -6,11 +6,14 @@ from pathlib import Path
 import re
 from typing import Iterable
 from urllib.parse import quote_plus
+from urllib.parse import quote
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
+import requests
 
 from app.config.settings import settings
+from app.seace.departments import department_code
 from app.seace.parser import parse_result_table
 from app.seace.sources import PUBLIC_SOURCES, SeaceSource
 from app.utils.logger import get_logger
@@ -44,6 +47,9 @@ class SeaceScraper:
         self.headless = settings.seace_headless if headless is None else headless
 
     def search(self, query: SearchQuery, sources: Iterable[SeaceSource] = PUBLIC_SOURCES) -> list[dict[str, object]]:
+        if settings.seace_source.lower() == "openegocio":
+            return self._search_openegocio(query)
+
         results: list[dict[str, object]] = []
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=self.headless)
@@ -66,6 +72,41 @@ class SeaceScraper:
             finally:
                 browser.close()
         return results
+
+    def _search_openegocio(self, query: SearchQuery) -> list[dict[str, object]]:
+        results: list[dict[str, object]] = []
+        department = department_code(query.department)
+        keyword = quote(query.keyword or "0", safe="")
+        for object_code in settings.seace_object_codes:
+            url = (
+                f"{settings.seace_openegocio_base_url.rstrip('/')}"
+                f"/codObjeto/codDepartamento/sintesisProceso/codTipoProceso/"
+                f"{object_code}/{department}/{keyword}/0"
+            )
+            logger.info(
+                "Consultando SEACE Oportunidades de Negocio: objeto=%s departamento=%s keyword=%s",
+                object_code,
+                query.department or "todos",
+                query.keyword,
+            )
+            response = requests.get(
+                url,
+                timeout=60,
+                headers={
+                    "Accept": "application/json",
+                    "User-Agent": (
+                        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+                    ),
+                },
+            )
+            response.raise_for_status()
+            payload = response.json()
+            if not isinstance(payload, list):
+                logger.warning("Respuesta SEACE prod4 inesperada para %s: %s", url, type(payload).__name__)
+                continue
+            results.extend(self._normalize_openegocio_row(item, query) for item in payload if isinstance(item, dict))
+        return [item for item in results if self._has_identity(item)]
 
     def _search_source(self, page, source: SeaceSource, query: SearchQuery) -> list[dict[str, object]]:
         if query.department and source.name not in DEPARTMENT_FILTER_SOURCES:
@@ -360,6 +401,39 @@ class SeaceScraper:
         return f"{base_url}#buscar:{quote_plus(seace_code)}"
 
     @staticmethod
+    def _normalize_openegocio_row(row: dict[str, object], query: SearchQuery) -> dict[str, object]:
+        title = _first_text(row, "detItem", "sintesisProceso", "detCubso", "nomenclatura")
+        description_parts = [
+            _first_text(row, "sintesisProceso"),
+            _first_text(row, "detItem"),
+            _first_text(row, "detCubso"),
+        ]
+        description = " | ".join(part for part in description_parts if part)
+        nomenclature = _first_text(row, "nomenclatura")
+        item = _first_text(row, "nroItem")
+        seace_code = "#".join(part for part in (nomenclature, item) if part)
+        id_procedure = _first_text(row, "idProcedimiento")
+        seace_url = (
+            f"https://prod4.seace.gob.pe/openegocio/#/ficha/idProceso/{id_procedure}"
+            if id_procedure
+            else "https://prod4.seace.gob.pe/openegocio/"
+        )
+        return {
+            "source": "seace_oportunidades_negocio",
+            "seace_code": seace_code or id_procedure,
+            "title": title,
+            "description": description or title,
+            "entity_name": _first_text(row, "detEntidad"),
+            "region": query.department,
+            "object_type": _first_text(row, "detObjeto"),
+            "procedure_type": _first_text(row, "detTipoProceso"),
+            "estimated_amount": _first_text(row, "valorReferencialItem", "valorReferencial"),
+            "publication_date": _first_text(row, "fechaConvocatoria"),
+            "deadline": _first_text(row, "fechaFin", "fechaPresentacionPropuestas"),
+            "seace_url": seace_url,
+        }
+
+    @staticmethod
     def _save_debug_artifacts(page, source_name: str) -> None:
         debug_dir = settings.data_dir / "debug"
         timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
@@ -379,3 +453,14 @@ class SeaceScraper:
             )
         except Exception:
             logger.exception("No se pudo guardar diagnostico SEACE")
+
+
+def _first_text(row: dict[str, object], *keys: str) -> str:
+    for key in keys:
+        value = row.get(key)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text and text != "---":
+            return text
+    return ""
