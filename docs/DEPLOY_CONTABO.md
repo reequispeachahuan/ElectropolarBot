@@ -64,8 +64,8 @@ Usa la rama que tenga estos cambios productivos:
 ```bash
 mkdir -p ~/apps
 cd ~/apps
-git clone https://github.com/4zzuf/ElectropolarBotB.git
-cd ElectropolarBotB
+git clone https://github.com/reequispeachahuan/ElectropolarBot.git
+cd ElectropolarBot
 git checkout modificaciones
 ```
 
@@ -225,7 +225,7 @@ cat backups/NOMBRE_DEL_BACKUP.sql.gz | gunzip | docker compose --env-file .env.p
 ## 11. Actualizar version en el VPS
 
 ```bash
-cd ~/apps/ElectropolarBotB
+cd ~/apps/ElectropolarBot
 git pull
 docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.prod.yml --profile backup up -d --build
 docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.prod.yml logs -f app
